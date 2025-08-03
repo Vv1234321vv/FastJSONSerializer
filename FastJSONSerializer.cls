@@ -598,7 +598,29 @@ Private Function SerializeNestedDict(ByVal nestedDict As Variant) As String
 End Function
 
 Public Function parse(ByRef json As String) As Variant
-    Set parse = parseValue(json, 1)
+    ' BULLETPROOF parse method that handles both objects and arrays
+    On Error GoTo ParseError
+    
+    Dim index As Long
+    index = 1
+    
+    ' Skip whitespace
+    Call skipWhitespace(json, index)
+    
+    ' Check what type of JSON we're parsing
+    If Mid(json, index, 1) = "{" Then
+        ' Object - use Set
+        Set parse = parseValue(json, index)
+    Else
+        ' Array or primitive - use regular assignment
+        parse = parseValue(json, index)
+    End If
+    Exit Function
+    
+ParseError:
+    ' Return Nothing on parse error
+    parse = Nothing
+    Err.Clear
 End Function
 
 ' *** PROVEN SERIALIZATION ENGINE (from original FastJSONSerializer) ***
