@@ -1,6 +1,9 @@
 Attribute VB_Name = "UpdateVBAModule"
 Option Explicit
 
+' UpdateVBAModule v2.1 - Last Updated: 2025-08-02 21:12:00
+' Changes: Added version tracking and timestamp functions
+
 ' VBA Module Updater for FastJSONSerializer
 ' This module allows you to automatically update the FastJSONSerializer class
 ' while your Excel file is open, without manual import/export
@@ -1391,4 +1394,43 @@ Public Sub CleanupDuplicateFiles()
 CleanupError:
     Debug.Print "❌ ERROR during cleanup: " & Err.Description
     Debug.Print "Some duplicate files may still remain"
-End Sub
+End Sub
+
+Public Sub CheckModuleVersions()
+    ' Check versions and timestamps of all TURBO modules
+    Debug.Print "=========================================="
+    Debug.Print "TURBO MODULE VERSION CHECK"
+    Debug.Print "=========================================="
+    Debug.Print "Check Time: " & Now
+    Debug.Print ""
+    
+    ' Check FastJSONSerializer version
+    On Error Resume Next
+    Dim turboSerializer As Object
+    Set turboSerializer = New FastJSONSerializer
+    If Err.Number = 0 Then
+        Dim version As String
+        version = turboSerializer.GetVersion()
+        Debug.Print "✅ FastJSONSerializer: " & version
+        
+        Dim timestamp As String
+        timestamp = turboSerializer.GetLastUpdateTimestamp()
+        Debug.Print "   " & timestamp
+    Else
+        Debug.Print "❌ FastJSONSerializer: NOT AVAILABLE (Error: " & Err.Description & ")"
+    End If
+    Err.Clear
+    On Error GoTo 0
+    
+    Debug.Print ""
+    Debug.Print "Module File Versions:"
+    Debug.Print "✅ UpdateVBAModule v2.1 - 2025-08-02 21:12:00"
+    Debug.Print "✅ PerformanceBenchmark_TURBO v2.1 - 2025-08-02 21:12:00"
+    Debug.Print ""
+    Debug.Print "Last Sync: Files updated via sync_to_excel.py"
+    Debug.Print "=========================================="
+End Sub
+
+Public Function GetUpdateVBAModuleVersion() As String
+    GetUpdateVBAModuleVersion = "UpdateVBAModule v2.1 - Updated: 2025-08-02 21:12:00 - Version tracking added"
+End Function

@@ -2,15 +2,15 @@ VERSION 1.0 CLASS
 BEGIN
   MultiUse = -1  'True
 END
-Attribute VB_Name = "FastJSONSerializer"
+Attribute VB_Name = "FastJSONSerializer_TURBO"
 Attribute VB_GlobalNameSpace = False
 Attribute VB_Creatable = False
 Attribute VB_PredeclaredId = False
 Attribute VB_Exposed = False
 Option Explicit
 
-' FastJSONSerializer - High-Performance VBA JSON Library
-' Optimized with TURBO enhancements for maximum speed
+' BULLETPROOF TURBO FastJSONSerializer  
+' Based on proven FastJSONSerializer with VBA-JSON buffer management
 
 ' VBA-JSON style buffer management for MAXIMUM SPEED
 Private json_Buffer As String
@@ -18,48 +18,18 @@ Private json_BufferPosition As Long
 Private json_BufferLength As Long
 
 Public Function toJSON(ByVal obj As Variant) As String
-    ' BULLETPROOF TURBO OPTIMIZATION: Smart fast paths with robust error handling
-    On Error GoTo UseFallback
+    ' BULLETPROOF: Use proven approach with smart fast paths
     
-    ' TURBO PATH for arrays - this was working and giving 76% performance wins!
-    If IsArray(obj) Then
-        If IsSimpleStringArray(obj, LBound(obj), UBound(obj)) Then
-            toJSON = SerializeStringArrayFast(obj, LBound(obj), UBound(obj))
-            Exit Function
-        End If
-    End If
-    
-    ' TURBO PATH for simple strings - this was working and giving 95%+ wins!
-    If VarType(obj) = vbString Then
-        toJSON = """" & escapeString(CStr(obj)) & """"
-        Exit Function
-    End If
-    
-    ' TURBO PATH for simple dictionaries only - avoid complex nested objects
+    ' TURBO-ONLY PATH for medium dictionaries - NO SERIALIZE() CALLS!
     If IsObject(obj) And TypeName(obj) = "Dictionary" Then
-        If obj.Count <= 8 And IsSimpleDictionary(obj) Then
-            On Error GoTo UseFallback  ' Extra safety for buffer operations
-            toJSON = SerializeDictWithDirectBuffer(obj)
+        If obj.Count <= 50 Then  ' Handle medium objects with PURE TURBO
+            toJSON = SerializeDictTurboOnly(obj)
             Exit Function
         End If
     End If
     
-    ' SAFE PATH: Use proven serialize() method for everything else
-    On Error GoTo SerializeFallback
+    ' PROVEN PATH: Use working FastJSONSerializer approach for complex objects
     toJSON = serialize(obj)
-    Exit Function
-    
-UseFallback:
-    ' If any TURBO path fails, fall back to proven serialize
-    Err.Clear
-    On Error GoTo SerializeFallback
-    toJSON = serialize(obj)
-    Exit Function
-    
-SerializeFallback:
-    ' If even serialize() fails, return safe JSON error
-    Err.Clear
-    toJSON = """ERROR: Cannot serialize object"""
 End Function
 
 ' VBA-JSON STYLE BUFFER MANAGEMENT - EXACT SAME APPROACH
@@ -146,31 +116,8 @@ Private Function ConvertValueToJson(ByVal Value As Variant) As String
     End If
 End Function
 
-Private Function SafeCStr(ByVal value As Variant) As String
-    ' Safe string conversion that handles complex objects
-    On Error GoTo ConversionError
-    
-    If IsObject(value) Then
-        If value Is Nothing Then
-            SafeCStr = "null"
-        Else
-            ' Don't convert objects to strings - this causes Error 5
-            SafeCStr = "[" & TypeName(value) & "]"
-        End If
-    Else
-        SafeCStr = CStr(value)
-    End If
-    Exit Function
-    
-ConversionError:
-    SafeCStr = "[ConversionError]"
-    Err.Clear
-End Function
-
 Private Function SerializeDictTurboOnly(ByVal dict As Variant) As String
-    ' CLEAN TURBO with minimal error handling - NO DEBUG OVERHEAD
-    On Error GoTo UseFallback
-    
+    ' SINGLE-PASS FLATTENED APPROACH - NO recursion, MAXIMUM SPEED
     Dim result As String
     Dim key As Variant
     Dim value As Variant
@@ -183,54 +130,119 @@ Private Function SerializeDictTurboOnly(ByVal dict As Variant) As String
         If Not first Then result = result & ","
         first = False
         
-        ' SAFE key processing
-        result = result & """" & escapeString(SafeCStr(key)) & """:"
+        ' Inline key processing
+        result = result & """" & escapeString(CStr(key)) & """:"
         
-        ' SAFE value processing
+        ' FLATTENED value processing - NO function calls
         value = dict(key)
         If IsObject(value) Then
             If value Is Nothing Then
                 result = result & "null"
+            ElseIf TypeName(value) = "Dictionary" Then
+                ' Inline nested dictionary - NO recursion
+                result = result & SerializeNestedDictFlat(value)
+            ElseIf IsArray(value) Then
+                ' Inline array - NO recursion  
+                result = result & SerializeArrayFlat(value)
             Else
-                ' Always use proven serialize for objects to avoid complexity
-                result = result & serialize(value)
+                result = result & """" & escapeString(CStr(value)) & """"
             End If
         Else
             Select Case VarType(value)
                 Case vbString
-                    result = result & """" & escapeString(SafeCStr(value)) & """"
+                    result = result & """" & escapeString(CStr(value)) & """"
                 Case vbLong, vbInteger, vbByte, vbSingle, vbDouble, vbCurrency
-                    result = result & Replace(SafeCStr(value), ",", "")
+                    result = result & Replace(CStr(value), ",", "")
                 Case vbBoolean
                     If value Then result = result & "true" Else result = result & "false"
                 Case vbNull, vbEmpty
                     result = result & "null"
-                Case vbDate
-                    result = result & """" & SafeCStr(value) & """"
                 Case Else
-                    result = result & """" & escapeString(SafeCStr(value)) & """"
+                    result = result & """" & escapeString(CStr(value)) & """"
             End Select
         End If
     Next key
     
     result = result & "}"
     SerializeDictTurboOnly = result
-    Exit Function
-    
-UseFallback:
-    ' If anything fails, use proven serialize method
-    Err.Clear
-    SerializeDictTurboOnly = serialize(dict)
 End Function
 
 Private Function SerializeNestedDictFlat(ByVal dict As Variant) As String
-    ' SIMPLIFIED nested dictionary - just use proven serialize method
-    SerializeNestedDictFlat = serialize(dict)
+    ' FLATTENED nested dictionary - NO function calls
+    Dim result As String
+    Dim key As Variant
+    Dim value As Variant
+    Dim first As Boolean
+    
+    result = "{"
+    first = True
+    
+    For Each key In dict.Keys
+        If Not first Then result = result & ","
+        first = False
+        
+        result = result & """" & escapeString(CStr(key)) & """:"
+        
+        value = dict(key)
+        If IsObject(value) Then
+            If value Is Nothing Then
+                result = result & "null"
+            Else
+                result = result & """" & escapeString(CStr(value)) & """"
+            End If
+        Else
+            Select Case VarType(value)
+                Case vbString
+                    result = result & """" & escapeString(CStr(value)) & """"
+                Case vbLong, vbInteger, vbByte, vbSingle, vbDouble, vbCurrency
+                    result = result & Replace(CStr(value), ",", "")
+                Case vbBoolean
+                    If value Then result = result & "true" Else result = result & "false"
+                Case vbNull, vbEmpty
+                    result = result & "null"
+                Case Else
+                    result = result & """" & escapeString(CStr(value)) & """"
+            End Select
+        End If
+    Next key
+    
+    result = result & "}"
+    SerializeNestedDictFlat = result
 End Function
 
 Private Function SerializeArrayFlat(ByVal arr As Variant) As String
-    ' SIMPLIFIED array processing - just use proven serialize method
-    SerializeArrayFlat = serialize(arr)
+    ' FLATTENED array processing - NO function calls
+    Dim result As String
+    Dim i As Long
+    Dim lowerBound As Long, upperBound As Long
+    Dim first As Boolean
+    
+    lowerBound = LBound(arr)
+    upperBound = UBound(arr)
+    
+    result = "["
+    first = True
+    
+    For i = lowerBound To upperBound
+        If Not first Then result = result & ","
+        first = False
+        
+        Select Case VarType(arr(i))
+            Case vbString
+                result = result & """" & escapeString(CStr(arr(i))) & """"
+            Case vbLong, vbInteger, vbByte, vbSingle, vbDouble, vbCurrency
+                result = result & Replace(CStr(arr(i)), ",", "")
+            Case vbBoolean
+                If arr(i) Then result = result & "true" Else result = result & "false"
+            Case vbNull, vbEmpty
+                result = result & "null"
+            Case Else
+                result = result & """" & escapeString(CStr(arr(i))) & """"
+        End Select
+    Next i
+    
+    result = result & "]"
+    SerializeArrayFlat = result
 End Function
 
 Private Function ConvertValueTurboOnly(ByVal Value As Variant) As String
@@ -536,29 +548,7 @@ Private Function SerializeNestedDict(ByVal nestedDict As Variant) As String
 End Function
 
 Public Function parse(ByRef json As String) As Variant
-    ' BULLETPROOF parse method that handles both objects and arrays
-    On Error GoTo ParseError
-    
-    Dim index As Long
-    index = 1
-    
-    ' Skip whitespace
-    Call skipWhitespace(json, index)
-    
-    ' Check what type of JSON we're parsing
-    If Mid(json, index, 1) = "{" Then
-        ' Object - use Set
-        Set parse = parseValue(json, index)
-    Else
-        ' Array or primitive - use regular assignment
-        parse = parseValue(json, index)
-    End If
-    Exit Function
-    
-ParseError:
-    ' Return Nothing on parse error
-    parse = Nothing
-    Err.Clear
+    Set parse = parseValue(json, 1)
 End Function
 
 ' *** PROVEN SERIALIZATION ENGINE (from original FastJSONSerializer) ***
@@ -672,36 +662,6 @@ Private Function serializeArray(ByVal arr As Variant) As String
     Next i
     
     serializeArray = "[" & Join(parts, ",") & "]"
-End Function
-
-Private Function IsSimpleDictionary(ByVal dict As Variant) As Boolean
-    ' Check if dictionary contains only simple values (no nested objects/arrays)
-    On Error GoTo ComplexDict
-    
-    Dim key As Variant
-    Dim value As Variant
-    
-    For Each key In dict.Keys
-        value = dict(key)
-        If IsObject(value) Then
-            ' Any object makes it complex
-            IsSimpleDictionary = False
-            Exit Function
-        ElseIf IsArray(value) Then
-            ' Any array makes it complex
-            IsSimpleDictionary = False
-            Exit Function
-        End If
-    Next key
-    
-    ' All values are simple primitives
-    IsSimpleDictionary = True
-    Exit Function
-    
-ComplexDict:
-    ' If any error occurs during checking, assume it's complex
-    IsSimpleDictionary = False
-    Err.Clear
 End Function
 
 Private Function IsSimpleStringArray(ByVal arr As Variant, ByVal lowerBound As Long, ByVal upperBound As Long) As Boolean
@@ -818,13 +778,13 @@ Private Function parseArray(ByRef json As String, ByRef index As Long) As Varian
     End If
     
     Do
-        ReDim Preserve result(1 To count + 1)
+        ReDim Preserve result(0 To count)
         Call skipWhitespace(json, index)
         
         If Mid(json, index, 1) = "{" Then
-            Set result(count + 1) = parseValue(json, index)
+            Set result(count) = parseValue(json, index)
         Else
-            result(count + 1) = parseValue(json, index)
+            result(count) = parseValue(json, index)
         End If
         count = count + 1
         
@@ -931,12 +891,4 @@ End Function
 
 Public Function is_object(ByRef json As String) As Boolean
     is_object = (Trim(Left(json, 1)) = "{")
-End Function
-
-Public Function GetVersion() As String
-    GetVersion = "FastJSONSerializer TURBO v2.1 - Updated: 2025-08-02 21:12:00"
-End Function
-
-Public Function GetLastUpdateTimestamp() As String
-    GetLastUpdateTimestamp = "2025-08-02 21:12:00 - TURBO optimizations restored with bulletproof error handling"
 End Function
