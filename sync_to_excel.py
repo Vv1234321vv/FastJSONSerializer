@@ -17,18 +17,10 @@ TARGET_DIR = "/mnt/c/Users/Ivan Martino/Desktop/Monthly Budget"
 # Files to sync
 FILES_TO_SYNC = [
     "FastJSONSerializer.cls",
-    "FastJSONSerializer_TURBO.cls",
-    "FastJSONSerializer_TURBO_BULLETPROOF.cls",
     "TestFastJSONSerializer.bas",
     "UpdateVBAModule.bas",
-    "PerformanceBenchmark.bas",
     "PerformanceBenchmark_TURBO.bas",
-    "TURBO_Class_Test.bas",
-    "TURBO_Logger.bas",
-    "here_is_the_test.json",
-    "here_is_the_test_medium.json",
-    "here_is_the_test_simple.json",
-    "here_is_the_test_ultra_simple.json"
+    "here_is_the_test.json"
 ]
 
 def copy_file_with_backup(source, target):

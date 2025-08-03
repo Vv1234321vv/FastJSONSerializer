@@ -57,6 +57,21 @@ Public Sub BenchmarkTURBO()
     Debug.Print "PerformanceBenchmark_TURBO v2.1"
     Debug.Print "Last Updated: 2025-08-02 21:12:00"
     Debug.Print "Changes: Error 5 fixes applied, bulletproof error handling"
+    Debug.Print ""
+    
+    ' Show FastJSONSerializer version info
+    On Error Resume Next
+    Dim turboVersionCheck As Object
+    Set turboVersionCheck = New FastJSONSerializer
+    If Err.Number = 0 Then
+        Debug.Print "*** FASTJSONSERIALIZER VERSION INFO ***"
+        Debug.Print turboVersionCheck.GetVersion()
+        Debug.Print turboVersionCheck.GetLastUpdateTimestamp()
+    Else
+        Debug.Print "*** FASTJSONSERIALIZER VERSION: NOT AVAILABLE ***"
+    End If
+    Err.Clear
+    On Error GoTo 0
     
     ' Save log if available
     If hasLogger Then
