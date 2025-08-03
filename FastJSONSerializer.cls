@@ -117,7 +117,9 @@ Private Function ConvertValueToJson(ByVal Value As Variant) As String
 End Function
 
 Private Function SerializeDictTurboOnly(ByVal dict As Variant) As String
-    ' SINGLE-PASS FLATTENED APPROACH - NO recursion, MAXIMUM SPEED
+    ' BULLETPROOF TURBO with error handling for complex types
+    On Error GoTo UseFallback
+    
     Dim result As String
     Dim key As Variant
     Dim value As Variant
@@ -130,22 +132,29 @@ Private Function SerializeDictTurboOnly(ByVal dict As Variant) As String
         If Not first Then result = result & ","
         first = False
         
-        ' Inline key processing
+        ' Safe key processing
+        On Error Resume Next
         result = result & """" & escapeString(CStr(key)) & """:"
+        If Err.Number <> 0 Then GoTo UseFallback
+        On Error GoTo UseFallback
         
-        ' FLATTENED value processing - NO function calls
+        ' SAFE value processing with type checking
         value = dict(key)
         If IsObject(value) Then
             If value Is Nothing Then
                 result = result & "null"
             ElseIf TypeName(value) = "Dictionary" Then
-                ' Inline nested dictionary - NO recursion
+                ' Use safe nested handling
                 result = result & SerializeNestedDictFlat(value)
             ElseIf IsArray(value) Then
-                ' Inline array - NO recursion  
+                ' Use safe array handling
                 result = result & SerializeArrayFlat(value)
             Else
+                ' Safe object conversion
+                On Error Resume Next
                 result = result & """" & escapeString(CStr(value)) & """"
+                If Err.Number <> 0 Then GoTo UseFallback
+                On Error GoTo UseFallback
             End If
         Else
             Select Case VarType(value)
@@ -157,18 +166,31 @@ Private Function SerializeDictTurboOnly(ByVal dict As Variant) As String
                     If value Then result = result & "true" Else result = result & "false"
                 Case vbNull, vbEmpty
                     result = result & "null"
+                Case vbDate
+                    result = result & """" & CStr(value) & """"
                 Case Else
+                    ' Safe conversion for unknown types
+                    On Error Resume Next
                     result = result & """" & escapeString(CStr(value)) & """"
+                    If Err.Number <> 0 Then GoTo UseFallback
+                    On Error GoTo UseFallback
             End Select
         End If
     Next key
     
     result = result & "}"
     SerializeDictTurboOnly = result
+    Exit Function
+    
+UseFallback:
+    ' If TURBO fails, use proven serialize method
+    SerializeDictTurboOnly = serialize(dict)
 End Function
 
 Private Function SerializeNestedDictFlat(ByVal dict As Variant) As String
-    ' FLATTENED nested dictionary - NO function calls
+    ' SAFE nested dictionary handling with fallback
+    On Error GoTo UseFallback
+    
     Dim result As String
     Dim key As Variant
     Dim value As Variant
@@ -181,14 +203,20 @@ Private Function SerializeNestedDictFlat(ByVal dict As Variant) As String
         If Not first Then result = result & ","
         first = False
         
+        On Error Resume Next
         result = result & """" & escapeString(CStr(key)) & """:"
+        If Err.Number <> 0 Then GoTo UseFallback
+        On Error GoTo UseFallback
         
         value = dict(key)
         If IsObject(value) Then
             If value Is Nothing Then
                 result = result & "null"
             Else
+                On Error Resume Next
                 result = result & """" & escapeString(CStr(value)) & """"
+                If Err.Number <> 0 Then GoTo UseFallback
+                On Error GoTo UseFallback
             End If
         Else
             Select Case VarType(value)
@@ -200,18 +228,30 @@ Private Function SerializeNestedDictFlat(ByVal dict As Variant) As String
                     If value Then result = result & "true" Else result = result & "false"
                 Case vbNull, vbEmpty
                     result = result & "null"
+                Case vbDate
+                    result = result & """" & CStr(value) & """"
                 Case Else
+                    On Error Resume Next
                     result = result & """" & escapeString(CStr(value)) & """"
+                    If Err.Number <> 0 Then GoTo UseFallback
+                    On Error GoTo UseFallback
             End Select
         End If
     Next key
     
     result = result & "}"
     SerializeNestedDictFlat = result
+    Exit Function
+    
+UseFallback:
+    ' Use proven serialize method for complex nested dictionaries
+    SerializeNestedDictFlat = serialize(dict)
 End Function
 
 Private Function SerializeArrayFlat(ByVal arr As Variant) As String
-    ' FLATTENED array processing - NO function calls
+    ' SAFE array processing with fallback
+    On Error GoTo UseFallback
+    
     Dim result As String
     Dim i As Long
     Dim lowerBound As Long, upperBound As Long
@@ -227,6 +267,7 @@ Private Function SerializeArrayFlat(ByVal arr As Variant) As String
         If Not first Then result = result & ","
         first = False
         
+        On Error Resume Next
         Select Case VarType(arr(i))
             Case vbString
                 result = result & """" & escapeString(CStr(arr(i))) & """"
@@ -236,13 +277,22 @@ Private Function SerializeArrayFlat(ByVal arr As Variant) As String
                 If arr(i) Then result = result & "true" Else result = result & "false"
             Case vbNull, vbEmpty
                 result = result & "null"
+            Case vbDate
+                result = result & """" & CStr(arr(i)) & """"
             Case Else
                 result = result & """" & escapeString(CStr(arr(i))) & """"
         End Select
+        If Err.Number <> 0 Then GoTo UseFallback
+        On Error GoTo UseFallback
     Next i
     
     result = result & "]"
     SerializeArrayFlat = result
+    Exit Function
+    
+UseFallback:
+    ' Use proven serialize method for complex arrays
+    SerializeArrayFlat = serialize(arr)
 End Function
 
 Private Function ConvertValueTurboOnly(ByVal Value As Variant) As String
